@@ -38,10 +38,23 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 - 需要root权限执行
 - 确保5000端口未被占用
 - 脚本会自动配置防火墙规则（如果存在）
+- 默认使用 config_template_test 模板
+- 如果要使用其他模板:
+  1. 停止当前服务
+  2. 编辑 start.sh，修改 --template_index 参数（0-5）
+  3. 重新启动服务
 - 如果无法访问，请检查:
   1. 防火墙是否放行5000端口
   2. 云服务器安全组是否开放5000端口
   3. 查看日志: `tail -f sing-box.log`
+
+可用的配置模板:
+1. config_template_groups_rule_set_tun
+2. config_template_groups_rule_set_tun_fakeip
+3. config_template_no_groups_tun_VN
+4. config_template_test (默认)
+5. config_template_test_dns
+6. sb-config-1.11
 
 部署完成后脚本会自动显示访问地址
 

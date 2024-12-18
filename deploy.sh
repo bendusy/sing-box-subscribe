@@ -137,7 +137,8 @@ case $choice in
 #!/bin/bash
 cd "$(dirname "$0")"
 source venv/bin/activate
-nohup python main.py > sing-box.log 2>&1 &
+# 使用--template_index=3参数指定默认模板为config_template_test
+nohup python main.py --template_index=3 > sing-box.log 2>&1 &
 EOF
         chmod +x start.sh
         
