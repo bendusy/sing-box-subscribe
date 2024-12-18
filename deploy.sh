@@ -104,10 +104,24 @@ case $choice in
 
         # 检查依赖是否正确安装
         echo "检查依赖安装..."
-        for package in flask scp requests pyyaml "ruamel.yaml"; do
-            if ! python -c "import ${package//.//}" &> /dev/null; then
-                echo -e "${RED}${package} 安装失败${NC}"
-                exit 1
+        PACKAGES=(
+            "flask:flask"
+            "scp:scp"
+            "requests:requests"
+            "yaml:yaml"
+            "ruamel.yaml:ruamel.yaml"
+        )
+        
+        for package_pair in "${PACKAGES[@]}"; do
+            import_name="${package_pair%%:*}"
+            package_name="${package_pair#*:}"
+            if ! python -c "import ${import_name}" &> /dev/null; then
+                echo -e "${RED}${package_name} 安装失败，尝试重新安装...${NC}"
+                pip install --no-cache-dir "${package_name}"
+                if ! python -c "import ${import_name}" &> /dev/null; then
+                    echo -e "${RED}${package_name} 安装失败${NC}"
+                    exit 1
+                fi
             fi
         done
         
