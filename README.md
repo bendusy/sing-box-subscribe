@@ -34,21 +34,20 @@ docker run -p 5000:5000 sing-box:latest
 
 ### 一键部署脚本
 
-下载部署脚本并执行:
-
+使用Python部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s python
 ```
 
-或者:
+使用Docker部署:
+```bash
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s docker
+```
 
+或者下载脚本后交互式部署:
 ```bash
 wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
-
-脚本会提供两种部署方式:
-1. Python直接部署 - 适合快速测试
-2. Docker部署 - 适合生产环境
 
 注意事项:
 - 需要root权限执行
@@ -56,7 +55,7 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 - Python部署会在前台运行,建议使用screen保持后台运行:
   ```bash
   screen -S sing-box
-  ./deploy.sh
+  curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s python
   # 按 Ctrl+A+D 分离screen
   ```
 - Docker部署会自动在后台运行

@@ -5,6 +5,12 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
+# 检查是否已存在目录
+if [ -d "sing-box-subscribe" ]; then
+    echo "检测到已存在sing-box-subscribe目录，正在删除..."
+    rm -rf sing-box-subscribe
+fi
+
 echo -e "${BLUE}开始部署 sing-box-subscribe...${NC}"
 
 # 检查git是否安装
@@ -15,17 +21,22 @@ fi
 
 # 克隆仓库
 echo "克隆项目仓库..."
-git clone https://github.com/Toperlock/sing-box-subscribe.git
+git clone https://github.com/bendusy/sing-box-subscribe.git
 cd sing-box-subscribe
 
-# 询问部署方式
-echo -e "${GREEN}请选择部署方式:${NC}"
-echo "1) Python直接部署"
-echo "2) Docker部署"
-read -p "请输入选择(1-2): " choice
+# 获取部署方式
+# 如果没有参数，则进行交互式选择
+if [ -z "$1" ]; then
+    echo -e "${GREEN}请选择部署方式:${NC}"
+    echo "1) Python直接部署"
+    echo "2) Docker部署"
+    read -p "请输入选择(1-2): " choice
+else
+    choice=$1
+fi
 
 case $choice in
-    1)
+    1|"python")
         echo -e "${BLUE}开始Python部署...${NC}"
         # 检查Python是否安装
         if ! command -v python3 &> /dev/null; then
@@ -42,7 +53,7 @@ case $choice in
         python3 main.py
         ;;
         
-    2)
+    2|"docker")
         echo -e "${BLUE}开始Docker部署...${NC}"
         # 检查Docker是否安装
         if ! command -v docker &> /dev/null; then
@@ -60,7 +71,7 @@ case $choice in
         ;;
         
     *)
-        echo "无效的选择"
+        echo "无效的选择，请使用 1/python 或 2/docker 作为参数"
         exit 1
         ;;
 esac
