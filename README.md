@@ -53,21 +53,17 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 - 需要root权限执行
 - 确保5000端口未被占用
 - Python和Docker部署都会在后台运行
-- 查看运行日志:
+- 服务管理命令:
   ```bash
-  # Python部署日志
-  tail -f sing-box.log
+  # Python部署
+  启动: ./start.sh
+  停止: pkill -f 'python main.py'
+  查看日志: tail -f sing-box.log
   
-  # Docker部署日志
-  docker logs -f $(docker ps -q -f name=sing-box)
-  ```
-- 停止服务:
-  ```bash
-  # 停止Python部署
-  pkill -f "python3 main.py"
-  
-  # 停止Docker部署
-  docker stop $(docker ps -q -f name=sing-box)
+  # Docker部署
+  启动: docker start sing-box
+  停止: docker stop sing-box
+  查看日志: docker logs -f sing-box
   ```
 
 部署完成后脚本会自动显示访问地址

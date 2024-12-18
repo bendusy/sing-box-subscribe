@@ -6,6 +6,36 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# 清理函数
+cleanup() {
+    echo "开始清理环境..."
+    
+    # 停止并清理Python服务
+    pkill -f "python main.py"
+    rm -rf venv
+    rm -f sing-box.log
+    rm -f start.sh
+    
+    # 停止并清理Docker服务
+    if command -v docker &> /dev/null; then
+        if [ "$(docker ps -q -f name=sing-box)" ]; then
+            docker stop sing-box
+            docker rm sing-box
+        fi
+        if [ "$(docker images -q sing-box)" ]; then
+            docker rmi sing-box
+        fi
+    fi
+    
+    # 删除项目目录
+    cd ..
+    if [ -d "sing-box-subscribe" ]; then
+        rm -rf sing-box-subscribe
+    fi
+    
+    echo "清理完成"
+}
+
 # 获取服务器IP
 get_ip() {
     # 尝试多种方式获取公网IP
@@ -26,11 +56,8 @@ get_ip() {
     echo $IP
 }
 
-# 检查是否已存在目录
-if [ -d "sing-box-subscribe" ]; then
-    echo "检测到已存在sing-box-subscribe目录，正在删除..."
-    rm -rf sing-box-subscribe
-fi
+# 执行清理
+cleanup
 
 echo -e "${BLUE}开始部署 sing-box-subscribe...${NC}"
 
@@ -59,32 +86,45 @@ fi
 case $choice in
     1|"python")
         echo -e "${BLUE}开始Python部署...${NC}"
-        # 检查并安装Python
-        if ! command -v python3 &> /dev/null; then
-            echo "正在安装 Python3..."
-            apt-get update
-            apt-get install -y python3 python3-pip python-is-python3
-        fi
-        
+        # 检查并安装Python相关包
+        echo "安装Python相关包..."
+        apt-get update
+        apt-get install -y python3 python3-pip python3-venv python-is-python3
+
+        # 创建并激活虚拟环境
+        echo "创建虚拟环境..."
+        python3 -m venv venv
+        source venv/bin/activate
+
         # 安装依赖
         echo "安装Python依赖..."
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -r requirements.txt
-        
+        pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install flask scp requests pyyaml ruamel.yaml
+
         # 检查Flask是否正确安装
-        if ! python3 -c "import flask" &> /dev/null; then
-            echo -e "${RED}Flask安装失败，尝试重新安装...${NC}"
-            python3 -m pip install flask --upgrade
+        if ! python -c "import flask" &> /dev/null; then
+            echo -e "${RED}Flask安装失败${NC}"
+            exit 1
         fi
+        
+        # 创建启动脚本
+        echo "创建启动脚本..."
+        cat > start.sh << 'EOF'
+#!/bin/bash
+cd "$(dirname "$0")"
+source venv/bin/activate
+nohup python main.py > sing-box.log 2>&1 &
+EOF
+        chmod +x start.sh
         
         # 启动服务
         echo -e "${GREEN}启动服务...${NC}"
-        # 使用nohup后台运行
-        nohup python3 main.py > sing-box.log 2>&1 &
+        ./start.sh
         
         # 等待服务启动
         sleep 3
-        if pgrep -f "python3 main.py" > /dev/null; then
+        if pgrep -f "python main.py" > /dev/null; then
             echo -e "${GREEN}Python服务已成功启动${NC}"
         else
             echo -e "${RED}Python服务启动失败，请检查sing-box.log文件${NC}"
@@ -132,4 +172,18 @@ echo -e "${GREEN}部署完成!${NC}"
 echo "如果选择Python部署,服务已在后台运行"
 echo "如果选择Docker部署,服务已在后台运行"
 echo -e "${BLUE}可以通过 http://${SERVER_IP}:5000 访问服务${NC}"
-echo "查看日志: tail -f sing-box.log" 
+echo "查看日志: tail -f sing-box.log"
+
+# 添加服务管理说明
+echo -e "\n${GREEN}服务管理说明:${NC}"
+if [ "$choice" = "1" ] || [ "$choice" = "python" ]; then
+    echo "启动服务: ./start.sh"
+    echo "停止服务: pkill -f 'python main.py'"
+    echo "查看日志: tail -f sing-box.log"
+    echo "重新部署: bash deploy.sh python"
+else
+    echo "启动服务: docker start sing-box"
+    echo "停止服务: docker stop sing-box"
+    echo "查看日志: docker logs -f sing-box"
+    echo "重新部署: bash deploy.sh docker"
+fi 
