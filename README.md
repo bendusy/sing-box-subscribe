@@ -32,6 +32,24 @@ docker build --tag 'sing-box' .
 docker run -p 5000:5000 sing-box:latest
 ```
 
+### 一键部署脚本
+
+下载部署脚本并执行:
+
+```bash
+wget -O deploy.sh https://raw.githubusercontent.com/Toperlock/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh && ./deploy.sh
+```
+
+脚本会提供两种部署方式:
+1. Python直接部署 - 适合快速测试
+2. Docker部署 - 适合生产环境
+
+注意事项:
+- 需要root权限执行
+- 确保5000端口未被占用
+- Python部署会在前台运行,建议使用screen保持后台运行
+- Docker部署会自动在后台运行
+
 ### 根据已有的qx，surge，loon，clash规则列表自定义规则集[https://github.com/Toperlock/sing-box-geosite](https://github.com/Toperlock/sing-box-geosite)
 
 ### wechat规则集源文件写法：
