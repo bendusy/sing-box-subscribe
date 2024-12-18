@@ -21,20 +21,31 @@ docker run -p 5000:5000 sing-box:latest
 
 使用Python部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python --sub YOUR_SUB_URL
 ```
 
 使用Docker部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker --sub YOUR_SUB_URL
+```
+
+可选参数:
+- --template: 选择配置模板 (1-6，默认4)
+
+示例:
+```bash
+# 使用Python部署，指定订阅地址和模板
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python --sub https://example.com/sub --template 4
+
+# 使用Docker部署，指定订阅地址
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker --sub https://example.com/sub
 ```
 
 或者下载脚本后交互式部署:
 ```bash
 wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh
 ./deploy.sh              # 交互式部署
-./deploy.sh --type python  # Python部署
-./deploy.sh --type docker  # Docker部署
+./deploy.sh --type python --sub https://example.com/sub  # 非交互式部署
 ```
 
 注意事项:

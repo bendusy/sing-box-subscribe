@@ -56,6 +56,12 @@ get_ip() {
 
 # 选择配置模板
 select_template() {
+    # 如果是非交互式环境，使用默认模板
+    if [ ! -t 0 ]; then
+        echo -e "${BLUE}非交互式环境，使用默认模板 (4) config_template_test${NC}"
+        return 3
+    fi
+
     while true; do
         echo -e "\n${BLUE}可用的配置模板:${NC}"
         echo "1) config_template_groups_rule_set_tun"
@@ -83,6 +89,12 @@ select_template() {
 
 # 获取订阅地址
 get_subscription_url() {
+    # 如果是非交互式环境，提示用户需要提供订阅地址
+    if [ ! -t 0 ]; then
+        echo "请使用 --sub 参数提供订阅地址"
+        exit 1
+    fi
+
     while true; do
         read -p "请输入您的订阅地址: " sub_url
         if [ -n "$sub_url" ]; then
@@ -276,11 +288,13 @@ show_help() {
     echo "使用方法: $0 [选项]"
     echo "选项:"
     echo "  -t, --type      部署类型 (python 或 docker)"
+    echo "  -s, --sub       订阅地址"
+    echo "  -m, --template  模板索引 (1-6，默认4)"
     echo "  -h, --help      显示此帮助信息"
     echo
     echo "示例:"
-    echo "  $0 --type python    使用Python部署"
-    echo "  $0 --type docker    使用Docker部署"
+    echo "  $0 --type python --sub https://example.com/sub"
+    echo "  $0 --type docker --sub https://example.com/sub --template 4"
 }
 
 # 主流程
@@ -290,6 +304,14 @@ main() {
         case $1 in
             -t|--type)
                 deploy_choice="$2"
+                shift 2
+                ;;
+            -s|--sub)
+                subscription_url="$2"
+                shift 2
+                ;;
+            -m|--template)
+                template_choice="$2"
                 shift 2
                 ;;
             -h|--help)
