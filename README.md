@@ -37,7 +37,13 @@ docker run -p 5000:5000 sing-box:latest
 下载部署脚本并执行:
 
 ```bash
-wget -O deploy.sh https://raw.githubusercontent.com/Toperlock/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh && ./deploy.sh
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash
+```
+
+或者:
+
+```bash
+wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
 
 脚本会提供两种部署方式:
@@ -47,8 +53,15 @@ wget -O deploy.sh https://raw.githubusercontent.com/Toperlock/sing-box-subscribe
 注意事项:
 - 需要root权限执行
 - 确保5000端口未被占用
-- Python部署会在前台运行,建议使用screen保持后台运行
+- Python部署会在前台运行,建议使用screen保持后台运行:
+  ```bash
+  screen -S sing-box
+  ./deploy.sh
+  # 按 Ctrl+A+D 分离screen
+  ```
 - Docker部署会自动在后台运行
+
+部署完成后可通过 `http://服务器IP:5000` 访问服务
 
 ### 根据已有的qx，surge，loon，clash规则列表自定义规则集[https://github.com/Toperlock/sing-box-geosite](https://github.com/Toperlock/sing-box-geosite)
 
