@@ -89,7 +89,7 @@ case $choice in
         # 检查并安装Python相关包
         echo "安装Python相关包..."
         apt-get update
-        apt-get install -y python3 python3-pip python3-venv python-is-python3
+        apt-get install -y python3 python3-pip python3-venv python3-full python-is-python3
 
         # 创建并激活虚拟环境
         echo "创建虚拟环境..."
@@ -98,15 +98,18 @@ case $choice in
 
         # 安装依赖
         echo "安装Python依赖..."
-        pip install --upgrade pip
+        pip install --upgrade pip wheel setuptools
         pip install -r requirements.txt
-        pip install flask scp requests pyyaml ruamel.yaml
+        pip install flask scp requests pyyaml ruamel.yaml paramiko
 
-        # 检查Flask是否正确安装
-        if ! python -c "import flask" &> /dev/null; then
-            echo -e "${RED}Flask安装失败${NC}"
-            exit 1
-        fi
+        # 检查依赖是否正确安装
+        echo "检查依赖安装..."
+        for package in flask scp requests pyyaml "ruamel.yaml"; do
+            if ! python -c "import ${package//.//}" &> /dev/null; then
+                echo -e "${RED}${package} 安装失败${NC}"
+                exit 1
+            fi
+        done
         
         # 创建启动脚本
         echo "创建启动脚本..."
@@ -126,6 +129,9 @@ EOF
         sleep 3
         if pgrep -f "python main.py" > /dev/null; then
             echo -e "${GREEN}Python服务已成功启动${NC}"
+            # 显示最近的日志
+            echo -e "\n最近的日志输出:"
+            tail -n 10 sing-box.log
         else
             echo -e "${RED}Python服务启动失败，请检查sing-box.log文件${NC}"
             tail -n 10 sing-box.log
@@ -152,6 +158,9 @@ EOF
         # 检查容器是否正常运行
         if [ "$(docker ps -q -f name=sing-box)" ]; then
             echo -e "${GREEN}Docker容器已成功启动${NC}"
+            # 显示容器日志
+            echo -e "\n容器日志输出:"
+            docker logs sing-box
         else
             echo -e "${RED}Docker容器启动失败${NC}"
             docker logs sing-box
