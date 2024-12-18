@@ -3,7 +3,28 @@
 # 设置颜色输出
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
+
+# 获取服务器IP
+get_ip() {
+    # 尝试多种方式获取公网IP
+    IP=$(curl -s http://ipv4.icanhazip.com || \
+         curl -s http://api.ipify.org || \
+         curl -s http://ifconfig.me)
+    
+    if [ -z "$IP" ]; then
+        # 如果无法获取公网IP，尝试获取内网IP
+        IP=$(hostname -I | awk '{print $1}')
+    fi
+    
+    if [ -z "$IP" ]; then
+        echo "无法获取服务器IP"
+        IP="YOUR_IP"
+    fi
+    
+    echo $IP
+}
 
 # 检查是否已存在目录
 if [ -d "sing-box-subscribe" ]; then
@@ -48,9 +69,26 @@ case $choice in
         echo "安装Python依赖..."
         pip3 install -r requirements.txt
         
+        # 检查Flask是否正确安装
+        if ! python3 -c "import flask" &> /dev/null; then
+            echo -e "${RED}Flask安装失败，尝试重新安装...${NC}"
+            pip3 install flask --upgrade
+        fi
+        
         # 启动服务
         echo -e "${GREEN}启动服务...${NC}"
-        python3 main.py
+        # 使用nohup后台运行
+        nohup python3 main.py > sing-box.log 2>&1 &
+        
+        # 等待服务启动
+        sleep 3
+        if pgrep -f "python3 main.py" > /dev/null; then
+            echo -e "${GREEN}Python服务已成功启动${NC}"
+        else
+            echo -e "${RED}Python服务启动失败，请检查sing-box.log文件${NC}"
+            tail -n 10 sing-box.log
+            exit 1
+        fi
         ;;
         
     2|"docker")
@@ -68,6 +106,15 @@ case $choice in
         # 运行容器
         echo -e "${GREEN}启动Docker容器...${NC}"
         docker run -d -p 5000:5000 sing-box:latest
+        
+        # 检查容器是否正常运行
+        if [ "$(docker ps -q -f name=sing-box)" ]; then
+            echo -e "${GREEN}Docker容器已成功启动${NC}"
+        else
+            echo -e "${RED}Docker容器启动失败${NC}"
+            docker logs $(docker ps -q -f name=sing-box)
+            exit 1
+        fi
         ;;
         
     *)
@@ -76,7 +123,11 @@ case $choice in
         ;;
 esac
 
+# 获取服务器IP
+SERVER_IP=$(get_ip)
+
 echo -e "${GREEN}部署完成!${NC}"
-echo "如果选择Python部署,服务已在终端运行"
-echo "如果选择Docker部署,服务已在后台运行,端口5000"
-echo -e "${BLUE}可以通过 http://YOUR_IP:5000 访问服务${NC}" 
+echo "如果选择Python部署,服务已在后台运行"
+echo "如果选择Docker部署,服务已在后台运行"
+echo -e "${BLUE}可以通过 http://${SERVER_IP}:5000 访问服务${NC}"
+echo "查看日志: tail -f sing-box.log" 

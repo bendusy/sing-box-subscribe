@@ -52,15 +52,25 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 注意事项:
 - 需要root权限执行
 - 确保5000端口未被占用
-- Python部署会在前台运行,建议使用screen保持后台运行:
+- Python和Docker部署都会在后台运行
+- 查看运行日志:
   ```bash
-  screen -S sing-box
-  curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s python
-  # 按 Ctrl+A+D 分离screen
+  # Python部署日志
+  tail -f sing-box.log
+  
+  # Docker部署日志
+  docker logs -f $(docker ps -q -f name=sing-box)
   ```
-- Docker部署会自动在后台运行
+- 停止服务:
+  ```bash
+  # 停止Python部署
+  pkill -f "python3 main.py"
+  
+  # 停止Docker部署
+  docker stop $(docker ps -q -f name=sing-box)
+  ```
 
-部署完成后可通过 `http://服务器IP:5000` 访问服务
+部署完成后脚本会自动显示访问地址
 
 ### 根据已有的qx，surge，loon，clash规则列表自定义规则集[https://github.com/Toperlock/sing-box-geosite](https://github.com/Toperlock/sing-box-geosite)
 
