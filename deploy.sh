@@ -56,6 +56,48 @@ get_ip() {
     echo $IP
 }
 
+# 选择配置模板
+select_template() {
+    echo -e "\n${BLUE}可用的配置模板:${NC}"
+    echo "1) config_template_groups_rule_set_tun"
+    echo "2) config_template_groups_rule_set_tun_fakeip"
+    echo "3) config_template_no_groups_tun_VN"
+    echo "4) config_template_test"
+    echo "5) config_template_test_dns"
+    echo "6) sb-config-1.11"
+    
+    read -p "请选择配置模板 (1-6) [默认4]: " template_choice
+    case $template_choice in
+        1) return 0 ;;
+        2) return 1 ;;
+        3) return 2 ;;
+        4|"") return 3 ;;
+        5) return 4 ;;
+        6) return 5 ;;
+        *)
+            echo -e "${RED}无效的选择，使用默认模板 (4)${NC}"
+            return 3
+            ;;
+    esac
+}
+
+# 获取订阅地址
+get_subscription_url() {
+    while true; do
+        read -p "请输入您的订阅地址: " sub_url
+        if [ -n "$sub_url" ]; then
+            if curl -s "$sub_url" &> /dev/null; then
+                echo "$sub_url"
+                return 0
+            else
+                echo -e "${RED}无法访问订阅地址，请检查后重新输入${NC}"
+            fi
+        else
+            echo -e "${RED}订阅地址不能为空${NC}"
+        fi
+    done
+}
+
 # 执行清理
 cleanup
 
@@ -131,14 +173,18 @@ case $choice in
             sed -i 's/app.run()/app.run(host="0.0.0.0", port=5000)/' main.py
         fi
         
+        # 获取用户输入
+        select_template
+        template_index=$?
+        subscription_url=$(get_subscription_url)
+        
         # 创建启动脚本
         echo "创建启动脚本..."
-        cat > start.sh << 'EOF'
+        cat > start.sh << EOF
 #!/bin/bash
-cd "$(dirname "$0")"
+cd "\$(dirname "\$0")"
 source venv/bin/activate
-# 使用--template_index=3参数指定默认模板为config_template_test
-nohup python main.py --template_index=3 > sing-box.log 2>&1 &
+nohup python main.py --template_index=$template_index "$subscription_url" > sing-box.log 2>&1 &
 EOF
         chmod +x start.sh
         
@@ -177,11 +223,16 @@ EOF
         
     2|"docker")
         echo -e "${BLUE}开始Docker部署...${NC}"
-        # 检查Docker是否安装
+        # 检查Docker是���安装
         if ! command -v docker &> /dev/null; then
             echo "正在安装 Docker..."
             curl -fsSL https://get.docker.com | sh
         fi
+        
+        # 获取用户输入
+        select_template
+        template_index=$?
+        subscription_url=$(get_subscription_url)
         
         # 构建镜像
         echo "构建Docker镜像..."
@@ -201,7 +252,7 @@ EOF
         
         # 运行容器
         echo -e "${GREEN}启动Docker容器...${NC}"
-        docker run -d --name sing-box -p 5000:5000 sing-box:latest
+        docker run -d --name sing-box -p 5000:5000 sing-box:latest python main.py --template_index=$template_index "$subscription_url"
         
         # 检查容器是否正常运行
         echo "等待服务启动..."
@@ -241,7 +292,7 @@ if [ "$choice" = "1" ] || [ "$choice" = "python" ]; then
     echo "启动服务: ./start.sh"
     echo "停止服务: pkill -f 'python main.py'"
     echo "查看日志: tail -f sing-box.log"
-    echo "重新部署: bash deploy.sh python"
+    echo "重新部���: bash deploy.sh python"
 else
     echo "启动服务: docker start sing-box"
     echo "停止服务: docker stop sing-box"

@@ -29,7 +29,7 @@ curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/dep
 curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s docker
 ```
 
-或者下载脚本后交互式部署:
+或者下载脚本后部署:
 ```bash
 wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh && ./deploy.sh
 ```
@@ -38,11 +38,12 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 - 需要root权限执行
 - 确保5000端口未被占用
 - 脚本会自动配置防火墙规则（如果存在）
-- 默认使用 config_template_test 模板
-- 如果要使用其他模板:
+- 部署过程中需要:
+  1. 选择配置模板（默认使用 config_template_test）
+  2. 输入有效的订阅地址
+- 如果要修改配置:
   1. 停止当前服务
-  2. 编辑 start.sh，修改 --template_index 参数（0-5）
-  3. 重新启动服务
+  2. 重新运行部署脚本
 - 如果无法访问，请检查:
   1. 防火墙是否放行5000端口
   2. 云服务器安全组是否开放5000端口
@@ -57,6 +58,20 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 6. sb-config-1.11
 
 部署完成后脚本会自动显示访问地址
+
+使用示例:
+```bash
+# Python部署示例
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s python && \
+sed -i "s|https://your_subscription_url|https://example.com/sub|" sing-box-subscribe/start.sh && \
+cd sing-box-subscribe && ./start.sh
+
+# Docker部署示例
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s docker && \
+docker stop sing-box && \
+docker rm sing-box && \
+docker run -d --name sing-box -p 5000:5000 sing-box:latest python main.py --template_index=3 "https://example.com/sub"
+```
 
 ### 根据已有的qx，surge，loon，clash规则列表自定义规则集[https://github.com/Toperlock/sing-box-geosite](https://github.com/Toperlock/sing-box-geosite)
 

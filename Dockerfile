@@ -5,4 +5,4 @@ RUN \
     pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 EXPOSE 5000
-CMD ["python", "main.py", "--template_index=3"]
+CMD ["python", "main.py", "--template_index=3", "https://your_subscription_url"]
