@@ -93,7 +93,7 @@ get_subscription_url() {
                 echo -e "${RED}无法访问订阅地址，请检查后重新输入${NC}"
             fi
         else
-            echo -e "${RED}订阅地址不能为���${NC}"
+            echo -e "${RED}订阅地址不能为空${NC}"
         fi
     done
 }
@@ -271,16 +271,80 @@ select_deploy_type() {
     done
 }
 
+# 显示帮助信息
+show_help() {
+    echo "使用方法: $0 [选项]"
+    echo "选项:"
+    echo "  -t, --type      部署类型 (python 或 docker)"
+    echo "  -h, --help      显示此帮助信息"
+    echo
+    echo "示例:"
+    echo "  $0 --type python    使用Python部署"
+    echo "  $0 --type docker    使用Docker部署"
+}
+
 # 主流程
 main() {
-    # 1. 选择并检查部署环境
-    select_deploy_type
-    deploy_type=$?
-    
-    # 2. 清理环境
+    # 解析命令行参数
+    while [[ "$#" -gt 0 ]]; do
+        case $1 in
+            -t|--type)
+                deploy_choice="$2"
+                shift 2
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                echo "未知参数: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
+    # 如果没有指定部署类型，进入交互模式
+    if [ -z "$deploy_choice" ]; then
+        # 检查是否在终端中运行
+        if [ -t 0 ]; then
+            select_deploy_type
+            deploy_type=$?
+        else
+            echo "请指定部署类型: --type python 或 --type docker"
+            exit 1
+        fi
+    else
+        # 根据命令行参数设置部署类型
+        case "$deploy_choice" in
+            python)
+                if check_python_env; then
+                    echo "Python环境检查通过"
+                    deploy_type=1
+                else
+                    exit 1
+                fi
+                ;;
+            docker)
+                if check_docker_env; then
+                    echo "Docker环境检查通过"
+                    deploy_type=2
+                else
+                    exit 1
+                fi
+                ;;
+            *)
+                echo "无效的部署类型: $deploy_choice"
+                show_help
+                exit 1
+                ;;
+        esac
+    fi
+
+    # 1. 清理环境
     cleanup
     
-    # 3. 克隆仓库
+    # 2. 克隆仓库
     echo -e "${BLUE}开始部署 sing-box-subscribe...${NC}"
     if ! command -v git &> /dev/null; then
         echo "安装git..."
@@ -289,12 +353,12 @@ main() {
     git clone https://github.com/bendusy/sing-box-subscribe.git
     cd sing-box-subscribe
     
-    # 4. 获取必要参数
+    # 3. 获取必要参数
     select_template
     template_index=$?
     subscription_url=$(get_subscription_url)
     
-    # 5. 部署环境
+    # 4. 部署环境
     case $deploy_type in
         1)
             deploy_python
@@ -310,16 +374,16 @@ main() {
             ;;
     esac
     
-    # 6. 启动服务
+    # 5. 启动服务
     start_service "$deploy_type" "$template_index" "$subscription_url"
     
-    # 7. 检查服务状态
+    # 6. 检查服务状态
     if ! check_service "$deploy_type"; then
         echo -e "${RED}服务启动失败，请检查日志并重试${NC}"
         exit 1
     fi
     
-    # 8. 显示服务信息
+    # 7. 显示服务信息
     SERVER_IP=$(get_ip)
     SHARE_URL=$(generate_share_url "$SERVER_IP" "$subscription_url" "$template_index")
     
@@ -328,7 +392,7 @@ main() {
     echo -e "${GREEN}分享URL (可直接导入客户端):${NC}"
     echo -e "${BLUE}$SHARE_URL${NC}"
     
-    # 9. 显示管理命令
+    # 8. 显示管理命令
     echo -e "\n${GREEN}服务管理命令:${NC}"
     if [ "$deploy_type" = "python" ]; then
         echo "启动服务: ./start.sh"

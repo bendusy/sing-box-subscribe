@@ -21,23 +21,26 @@ docker run -p 5000:5000 sing-box:latest
 
 使用Python部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s python
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python
 ```
 
 使用Docker部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s docker
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker
 ```
 
-或者下载脚本后部署:
+或者下载脚本后交互式部署:
 ```bash
-wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh && ./deploy.sh
+wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh
+./deploy.sh              # 交互式部署
+./deploy.sh --type python  # Python部署
+./deploy.sh --type docker  # Docker部署
 ```
 
 注意事项:
 - 需要root权限执行
 - 确保5000端口未被占用
-- 脚本会自动配置防火墙规则（如果存在）
+- 脚本会自动检查并安装必要的环境
 - 部署过程中需要:
   1. 选择配置模板（默认使用 config_template_test）
   2. 输入有效的订阅地址
