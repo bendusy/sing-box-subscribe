@@ -59,20 +59,22 @@ fi
 case $choice in
     1|"python")
         echo -e "${BLUE}开始Python部署...${NC}"
-        # 检查Python是否安装
+        # 检查并安装Python
         if ! command -v python3 &> /dev/null; then
             echo "正在安装 Python3..."
-            apt-get update && apt-get install -y python3 python3-pip
+            apt-get update
+            apt-get install -y python3 python3-pip python-is-python3
         fi
         
         # 安装依赖
         echo "安装Python依赖..."
-        pip3 install -r requirements.txt
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -r requirements.txt
         
         # 检查Flask是否正确安装
         if ! python3 -c "import flask" &> /dev/null; then
             echo -e "${RED}Flask安装失败，尝试重新安装...${NC}"
-            pip3 install flask --upgrade
+            python3 -m pip install flask --upgrade
         fi
         
         # 启动服务
@@ -105,14 +107,14 @@ case $choice in
         
         # 运行容器
         echo -e "${GREEN}启动Docker容器...${NC}"
-        docker run -d -p 5000:5000 sing-box:latest
+        docker run -d --name sing-box -p 5000:5000 sing-box:latest
         
         # 检查容器是否正常运行
         if [ "$(docker ps -q -f name=sing-box)" ]; then
             echo -e "${GREEN}Docker容器已成功启动${NC}"
         else
             echo -e "${RED}Docker容器启动失败${NC}"
-            docker logs $(docker ps -q -f name=sing-box)
+            docker logs sing-box
             exit 1
         fi
         ;;
