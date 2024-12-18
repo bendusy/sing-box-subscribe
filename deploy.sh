@@ -38,13 +38,11 @@ cleanup() {
 
 # 获取服务器IP
 get_ip() {
-    # 尝试多种方式获取公网IP
     IP=$(curl -s http://ipv4.icanhazip.com || \
          curl -s http://api.ipify.org || \
          curl -s http://ifconfig.me)
     
     if [ -z "$IP" ]; then
-        # 如果无法获取公网IP，尝试获取内网IP
         IP=$(hostname -I | awk '{print $1}')
     fi
     
@@ -58,27 +56,29 @@ get_ip() {
 
 # 选择配置模板
 select_template() {
-    echo -e "\n${BLUE}可用的配置模板:${NC}"
-    echo "1) config_template_groups_rule_set_tun"
-    echo "2) config_template_groups_rule_set_tun_fakeip"
-    echo "3) config_template_no_groups_tun_VN"
-    echo "4) config_template_test"
-    echo "5) config_template_test_dns"
-    echo "6) sb-config-1.11"
-    
-    read -p "请选择配置模板 (1-6) [默认4]: " template_choice
-    case $template_choice in
-        1) return 0 ;;
-        2) return 1 ;;
-        3) return 2 ;;
-        4|"") return 3 ;;
-        5) return 4 ;;
-        6) return 5 ;;
-        *)
-            echo -e "${RED}无效的选择，使用默认模板 (4)${NC}"
-            return 3
-            ;;
-    esac
+    while true; do
+        echo -e "\n${BLUE}可用的配置模板:${NC}"
+        echo "1) config_template_groups_rule_set_tun"
+        echo "2) config_template_groups_rule_set_tun_fakeip"
+        echo "3) config_template_no_groups_tun_VN"
+        echo "4) config_template_test"
+        echo "5) config_template_test_dns"
+        echo "6) sb-config-1.11"
+        
+        read -p "请选择配置模板 (1-6) [默认4]: " template_choice
+        case $template_choice in
+            1) return 0 ;;
+            2) return 1 ;;
+            3) return 2 ;;
+            4|"") return 3 ;;
+            5) return 4 ;;
+            6) return 5 ;;
+            *)
+                echo -e "${RED}无效的选择，请重新输入${NC}"
+                continue
+                ;;
+        esac
+    done
 }
 
 # 获取订阅地址
@@ -93,93 +93,71 @@ get_subscription_url() {
                 echo -e "${RED}无法访问订阅地址，请检查后重新输入${NC}"
             fi
         else
-            echo -e "${RED}订阅地址不能为空${NC}"
+            echo -e "${RED}订阅地址不能为���${NC}"
         fi
     done
 }
 
-# 执行清理
-cleanup
+# 生成分享URL
+generate_share_url() {
+    local server_ip="$1"
+    local sub_url="$2"
+    local template_index="$3"
+    encoded_url=$(python -c "import urllib.parse; print(urllib.parse.quote('''$sub_url'''))")
+    echo "http://${server_ip}:5000/config/${encoded_url}?file=${template_index}"
+}
 
-echo -e "${BLUE}开始部署 sing-box-subscribe...${NC}"
+# 部署Python环境
+deploy_python() {
+    echo -e "${BLUE}开始Python环境部署...${NC}"
+    
+    # 安装Python相关包
+    echo "安装Python相关包..."
+    apt-get update
+    apt-get install -y python3 python3-pip python3-venv python3-full python-is-python3
 
-# 检查git是否安装
-if ! command -v git &> /dev/null; then
-    echo "正在安装 git..."
-    apt-get update && apt-get install -y git
-fi
+    # 创建并激活虚拟环境
+    echo "创建虚拟环境..."
+    python3 -m venv venv
+    source venv/bin/activate
 
-# 克隆仓库
-echo "克隆项目仓库..."
-git clone https://github.com/bendusy/sing-box-subscribe.git
-cd sing-box-subscribe
+    # 安装依赖
+    echo "安装Python依赖..."
+    pip install --upgrade pip wheel setuptools
+    pip install -r requirements.txt
+    pip install flask scp requests pyyaml ruamel.yaml paramiko
 
-# 获取部署方式
-# 如果没有参数，则进行交互式选择
-if [ -z "$1" ]; then
-    echo -e "${GREEN}请选择部署方式:${NC}"
-    echo "1) Python直接部署"
-    echo "2) Docker部署"
-    read -p "请输入选择(1-2): " choice
-else
-    choice=$1
-fi
+    # 修改Flask监听地址
+    echo "配置Flask监听地址..."
+    if [ -f main.py ]; then
+        sed -i 's/app.run()/app.run(host="0.0.0.0", port=5000)/' main.py
+    fi
+}
 
-case $choice in
-    1|"python")
-        echo -e "${BLUE}开始Python部署...${NC}"
-        # 检查并安装Python相关包
-        echo "安装Python相关包..."
-        apt-get update
-        apt-get install -y python3 python3-pip python3-venv python3-full python-is-python3
+# 部署Docker环境
+deploy_docker() {
+    echo -e "${BLUE}开始Docker环境部署...${NC}"
+    
+    # 安装Docker
+    if ! command -v docker &> /dev/null; then
+        echo "正在安装 Docker..."
+        curl -fsSL https://get.docker.com | sh
+    fi
 
-        # 创建并激活虚拟环境
-        echo "创建虚拟环境..."
-        python3 -m venv venv
-        source venv/bin/activate
+    # 构建镜像
+    echo "构建Docker镜像..."
+    docker build --tag 'sing-box' .
+}
 
-        # 安装依赖
-        echo "安装Python依赖..."
-        pip install --upgrade pip wheel setuptools
-        pip install -r requirements.txt
-        pip install flask scp requests pyyaml ruamel.yaml paramiko
-
-        # 检查依赖是否正确安装
-        echo "检查依赖安装..."
-        PACKAGES=(
-            "flask:flask"
-            "scp:scp"
-            "requests:requests"
-            "yaml:yaml"
-            "ruamel.yaml:ruamel.yaml"
-        )
-        
-        for package_pair in "${PACKAGES[@]}"; do
-            import_name="${package_pair%%:*}"
-            package_name="${package_pair#*:}"
-            if ! python -c "import ${import_name}" &> /dev/null; then
-                echo -e "${RED}${package_name} 安装失败，尝试重新安装...${NC}"
-                pip install --no-cache-dir "${package_name}"
-                if ! python -c "import ${import_name}" &> /dev/null; then
-                    echo -e "${RED}${package_name} 安装失败${NC}"
-                    exit 1
-                fi
-            fi
-        done
-
-        # 修改main.py中的Flask监听地址
-        echo "配置Flask监听地址..."
-        if [ -f main.py ]; then
-            sed -i 's/app.run()/app.run(host="0.0.0.0", port=5000)/' main.py
-        fi
-        
-        # 获取用户输入
-        select_template
-        template_index=$?
-        subscription_url=$(get_subscription_url)
-        
+# 启动服务
+start_service() {
+    local deploy_type="$1"
+    local template_index="$2"
+    local subscription_url="$3"
+    
+    echo -e "${GREEN}启动服务...${NC}"
+    if [ "$deploy_type" = "python" ]; then
         # 创建启动脚本
-        echo "创建启动脚本..."
         cat > start.sh << EOF
 #!/bin/bash
 cd "\$(dirname "\$0")"
@@ -187,115 +165,182 @@ source venv/bin/activate
 nohup python main.py --template_index=$template_index "$subscription_url" > sing-box.log 2>&1 &
 EOF
         chmod +x start.sh
-        
-        # 配置防火墙
-        echo "配置防火墙规则..."
-        if command -v ufw &> /dev/null; then
-            ufw allow 5000/tcp
-            ufw status
-        elif command -v firewall-cmd &> /dev/null; then
-            firewall-cmd --zone=public --add-port=5000/tcp --permanent
-            firewall-cmd --reload
-        else
-            echo "未检测到防火墙，请手动确保5000端口已开放"
-        fi
-        
-        # 启动服务
-        echo -e "${GREEN}启动服务...${NC}"
         ./start.sh
-        
-        # 等待服务启动
-        echo "等待服务启动..."
-        for i in {1..30}; do
-            if curl -s http://localhost:5000 &> /dev/null; then
-                echo -e "${GREEN}服务已成功启动并可访问${NC}"
-                break
-            fi
-            if [ $i -eq 30 ]; then
-                echo -e "${RED}服务启动超时，请检查日志${NC}"
-                tail -n 20 sing-box.log
-                exit 1
-            fi
-            sleep 1
-            echo -n "."
-        done
-        ;;
-        
-    2|"docker")
-        echo -e "${BLUE}开始Docker部署...${NC}"
-        # 检查Docker是���安装
-        if ! command -v docker &> /dev/null; then
-            echo "正在安装 Docker..."
-            curl -fsSL https://get.docker.com | sh
-        fi
-        
-        # 获取用户输入
-        select_template
-        template_index=$?
-        subscription_url=$(get_subscription_url)
-        
-        # 构建镜像
-        echo "构建Docker镜像..."
-        docker build --tag 'sing-box' .
-        
-        # 配置防火墙
-        echo "配置防火墙规则..."
-        if command -v ufw &> /dev/null; then
-            ufw allow 5000/tcp
-            ufw status
-        elif command -v firewall-cmd &> /dev/null; then
-            firewall-cmd --zone=public --add-port=5000/tcp --permanent
-            firewall-cmd --reload
-        else
-            echo "未检测到防火墙，请手动确保5000端口已开放"
-        fi
-        
-        # 运行容器
-        echo -e "${GREEN}启动Docker容器...${NC}"
+    else
         docker run -d --name sing-box -p 5000:5000 sing-box:latest python main.py --template_index=$template_index "$subscription_url"
-        
-        # 检查容器是否正常运行
-        echo "等待服务启动..."
-        for i in {1..30}; do
-            if curl -s http://localhost:5000 &> /dev/null; then
-                echo -e "${GREEN}服务已成功启动并可访问${NC}"
-                break
+    fi
+}
+
+# 检查服务状态
+check_service() {
+    local deploy_type="$1"
+    echo "等待服务启动..."
+    for i in {1..30}; do
+        if curl -s http://localhost:5000 &> /dev/null; then
+            echo -e "${GREEN}服务已成功启动并可访问${NC}"
+            return 0
+        fi
+        sleep 1
+        echo -n "."
+    done
+    
+    echo -e "\n${RED}服务启动失败，查看日志:${NC}"
+    if [ "$deploy_type" = "python" ]; then
+        tail -n 20 sing-box.log
+    else
+        docker logs sing-box
+    fi
+    return 1
+}
+
+# 检查Python环境
+check_python_env() {
+    echo "检查Python环境..."
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${BLUE}Python3未安装，是否安装？[Y/n]${NC}"
+        read -r install_python
+        if [[ $install_python =~ ^[Yy]$ ]] || [[ -z $install_python ]]; then
+            echo "安装Python环境..."
+            apt-get update
+            apt-get install -y python3 python3-pip python3-venv python3-full python-is-python3
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Python安装失败${NC}"
+                return 1
             fi
-            if [ $i -eq 30 ]; then
-                echo -e "${RED}服务启动超时，请检查容器日志${NC}"
-                docker logs sing-box
-                exit 1
+        else
+            echo "取消安装"
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# 检查Docker环境
+check_docker_env() {
+    echo "检查Docker环境..."
+    if ! command -v docker &> /dev/null; then
+        echo -e "${BLUE}Docker未安装，是否安装？[Y/n]${NC}"
+        read -r install_docker
+        if [[ $install_docker =~ ^[Yy]$ ]] || [[ -z $install_docker ]]; then
+            echo "安装Docker..."
+            curl -fsSL https://get.docker.com | sh
+            if [ $? -ne 0 ]; then
+                echo -e "${RED}Docker安装失败${NC}"
+                return 1
             fi
-            sleep 1
-            echo -n "."
-        done
-        ;;
+        else
+            echo "取消安装"
+            return 1
+        fi
+    fi
+    return 0
+}
+
+# 选择部署方式
+select_deploy_type() {
+    while true; do
+        echo -e "${GREEN}请选择部署方式:${NC}"
+        echo "1) Python直接部署"
+        echo "2) Docker部署"
+        read -p "请输入选择(1-2): " choice
         
-    *)
-        echo "无效的选择，请使用 1/python 或 2/docker 作为参数"
+        case $choice in
+            1)
+                if check_python_env; then
+                    echo "Python环境检查通过"
+                    return 1
+                else
+                    echo -e "${RED}Python环境检查失败，请选择其他部署方式或修复环境${NC}"
+                    continue
+                fi
+                ;;
+            2)
+                if check_docker_env; then
+                    echo "Docker环境检查通过"
+                    return 2
+                else
+                    echo -e "${RED}Docker环境检查失败，请选择其他部署方式或修复环境${NC}"
+                    continue
+                fi
+                ;;
+            *)
+                echo -e "${RED}无效的选择，请重新输入${NC}"
+                continue
+                ;;
+        esac
+    done
+}
+
+# 主流程
+main() {
+    # 1. 选择并检查部署环境
+    select_deploy_type
+    deploy_type=$?
+    
+    # 2. 清理环境
+    cleanup
+    
+    # 3. 克隆仓库
+    echo -e "${BLUE}开始部署 sing-box-subscribe...${NC}"
+    if ! command -v git &> /dev/null; then
+        echo "安装git..."
+        apt-get update && apt-get install -y git
+    fi
+    git clone https://github.com/bendusy/sing-box-subscribe.git
+    cd sing-box-subscribe
+    
+    # 4. 获取必要参数
+    select_template
+    template_index=$?
+    subscription_url=$(get_subscription_url)
+    
+    # 5. 部署环境
+    case $deploy_type in
+        1)
+            deploy_python
+            deploy_type="python"
+            ;;
+        2)
+            deploy_docker
+            deploy_type="docker"
+            ;;
+        *)
+            echo "无效的部署类型"
+            exit 1
+            ;;
+    esac
+    
+    # 6. 启动服务
+    start_service "$deploy_type" "$template_index" "$subscription_url"
+    
+    # 7. 检查服务状态
+    if ! check_service "$deploy_type"; then
+        echo -e "${RED}服务启动失败，请检查日志并重试${NC}"
         exit 1
-        ;;
-esac
+    fi
+    
+    # 8. 显示服务信息
+    SERVER_IP=$(get_ip)
+    SHARE_URL=$(generate_share_url "$SERVER_IP" "$subscription_url" "$template_index")
+    
+    echo -e "\n${GREEN}部署成功!${NC}"
+    echo -e "${BLUE}本地访问地址: http://${SERVER_IP}:5000${NC}"
+    echo -e "${GREEN}分享URL (可直接导入客户端):${NC}"
+    echo -e "${BLUE}$SHARE_URL${NC}"
+    
+    # 9. 显示管理命令
+    echo -e "\n${GREEN}服务管理命令:${NC}"
+    if [ "$deploy_type" = "python" ]; then
+        echo "启动服务: ./start.sh"
+        echo "停止服务: pkill -f 'python main.py'"
+        echo "查看日志: tail -f sing-box.log"
+    else
+        echo "启动服务: docker start sing-box"
+        echo "停止服务: docker stop sing-box"
+        echo "查看日志: docker logs -f sing-box"
+    fi
+    echo "重新部署: bash deploy.sh"
+}
 
-# 获取服务器IP
-SERVER_IP=$(get_ip)
-
-echo -e "${GREEN}部署完成!${NC}"
-echo "如果选择Python部署,服务已在后台运行"
-echo "如果选择Docker部署,服务已在后台运行"
-echo -e "${BLUE}可以通过 http://${SERVER_IP}:5000 访问服务${NC}"
-echo "查看日志: tail -f sing-box.log"
-
-# 添加服务管理说明
-echo -e "\n${GREEN}服务管理说明:${NC}"
-if [ "$choice" = "1" ] || [ "$choice" = "python" ]; then
-    echo "启动服务: ./start.sh"
-    echo "停止服务: pkill -f 'python main.py'"
-    echo "查看日志: tail -f sing-box.log"
-    echo "重新部���: bash deploy.sh python"
-else
-    echo "启动服务: docker start sing-box"
-    echo "停止服务: docker stop sing-box"
-    echo "查看日志: docker logs -f sing-box"
-    echo "重新部署: bash deploy.sh docker"
-fi 
+# 执行主流程
+main "$@" 

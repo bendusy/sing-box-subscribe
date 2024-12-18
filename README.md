@@ -41,6 +41,9 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 - 部署过程中需要:
   1. 选择配置模板（默认使用 config_template_test）
   2. 输入有效的订阅地址
+- 部署完成后会显示:
+  1. 本地访问地址 - 用于管理和测试
+  2. 分享URL - 可直接导入到客户端使用
 - 如果要修改配置:
   1. 停止当前服务
   2. 重新运行部署脚本
@@ -57,7 +60,13 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 5. config_template_test_dns
 6. sb-config-1.11
 
-部署完成后脚本会自动显示访问地址
+分享URL格式:
+```
+http://服务器IP:5000/config/订阅地址?file=模板索引
+```
+- 订阅地址需要经过URL编码
+- 模板索引对应上面的配置模板序号减1（0-5）
+- 此URL可以直接导入到支持的客户端中使用
 
 使用示例:
 ```bash
