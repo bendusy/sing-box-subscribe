@@ -21,12 +21,12 @@ docker run -p 5000:5000 sing-box:latest
 
 使用Python部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python --sub YOUR_SUB_URL
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python --sub "https://example.com/your_sub_url"
 ```
 
 使用Docker部署:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker --sub YOUR_SUB_URL
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker --sub "https://example.com/your_sub_url"
 ```
 
 可选参数:
@@ -35,18 +35,15 @@ curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/dep
 示例:
 ```bash
 # 使用Python部署，指定订阅地址和模板
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python --sub https://example.com/sub --template 4
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type python --sub "https://example.com/your_sub_url" --template 4
 
 # 使用Docker部署，指定订阅地址
-curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker --sub https://example.com/sub
+curl -fsSL https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh | bash -s -- --type docker --sub "https://example.com/your_sub_url"
 ```
 
-或者下载脚本后交互式部署:
-```bash
-wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/main/deploy.sh && chmod +x deploy.sh
-./deploy.sh              # 交互式部署
-./deploy.sh --type python --sub https://example.com/sub  # 非交互式部署
-```
+注意:
+- 订阅地址需要用引号包裹，避免特殊字符问题
+- 如果订阅地址包含 & 等特殊字符，必须使用引号
 
 注意事项:
 - 需要root权限执行

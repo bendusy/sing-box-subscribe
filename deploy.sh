@@ -174,12 +174,12 @@ start_service() {
 #!/bin/bash
 cd "\$(dirname "\$0")"
 source venv/bin/activate
-nohup python main.py --template_index=$template_index "$subscription_url" > sing-box.log 2>&1 &
+nohup python main.py --template_index=$template_index --sub "$subscription_url" > sing-box.log 2>&1 &
 EOF
         chmod +x start.sh
         ./start.sh
     else
-        docker run -d --name sing-box -p 5000:5000 sing-box:latest python main.py --template_index=$template_index "$subscription_url"
+        docker run -d --name sing-box -p 5000:5000 sing-box:latest python main.py --template_index=$template_index --sub "$subscription_url"
     fi
 }
 
@@ -293,8 +293,8 @@ show_help() {
     echo "  -h, --help      显示此帮助信息"
     echo
     echo "示例:"
-    echo "  $0 --type python --sub https://example.com/sub"
-    echo "  $0 --type docker --sub https://example.com/sub --template 4"
+    echo "  $0 --type python --sub \"https://example.com/your_sub_url\""
+    echo "  $0 --type docker --sub \"https://example.com/your_sub_url\" --template 4"
 }
 
 # 主流程
@@ -311,7 +311,7 @@ main() {
                 shift 2
                 ;;
             -m|--template)
-                template_choice="$2"
+                template_index="$2"
                 shift 2
                 ;;
             -h|--help)
@@ -326,6 +326,19 @@ main() {
         esac
     done
 
+    # 检查必要参数
+    if [ -z "$subscription_url" ] && [ ! -t 0 ]; then
+        echo "错误: 必须提供订阅地址 (--sub)"
+        show_help
+        exit 1
+    fi
+
+    # 如果没有指定模板，使用默认值
+    if [ -z "$template_index" ]; then
+        select_template
+        template_index=$?
+    fi
+
     # 如果没有指定部署类型，进入交互模式
     if [ -z "$deploy_choice" ]; then
         # 检查是否在终端中运行
@@ -333,7 +346,7 @@ main() {
             select_deploy_type
             deploy_type=$?
         else
-            echo "请指定部署类型: --type python 或 --type docker"
+            echo "请指定部���类型: --type python 或 --type docker"
             exit 1
         fi
     else
@@ -376,9 +389,14 @@ main() {
     cd sing-box-subscribe
     
     # 3. 获取必要参数
-    select_template
-    template_index=$?
-    subscription_url=$(get_subscription_url)
+    if [ -z "$template_index" ]; then
+        select_template
+        template_index=$?
+    fi
+    
+    if [ -z "$subscription_url" ]; then
+        subscription_url=$(get_subscription_url)
+    fi
     
     # 4. 部署环境
     case $deploy_type in
