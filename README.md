@@ -1,4 +1,3 @@
-
 本地python执行脚本命令：
 
 ```
@@ -38,19 +37,11 @@ wget -O deploy.sh https://raw.githubusercontent.com/bendusy/sing-box-subscribe/m
 注意事项:
 - 需要root权限执行
 - 确保5000端口未被占用
-- Python和Docker部署都会在后台运行
-- 服务管理命令:
-  ```bash
-  # Python部署
-  启动: ./start.sh
-  停止: pkill -f 'python main.py'
-  查看日志: tail -f sing-box.log
-  
-  # Docker部署
-  启动: docker start sing-box
-  停止: docker stop sing-box
-  查看日志: docker logs -f sing-box
-  ```
+- 脚本会自动配置防火墙规则（如果存在）
+- 如果无法访问，请检查:
+  1. 防火墙是否放行5000端口
+  2. 云服务器安全组是否开放5000端口
+  3. 查看日志: `tail -f sing-box.log`
 
 部署完成后脚本会自动显示访问地址
 

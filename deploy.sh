@@ -124,6 +124,12 @@ case $choice in
                 fi
             fi
         done
+
+        # 修改main.py中的Flask监听地址
+        echo "配置Flask监听地址..."
+        if [ -f main.py ]; then
+            sed -i 's/app.run()/app.run(host="0.0.0.0", port=5000)/' main.py
+        fi
         
         # 创建启动脚本
         echo "创建启动脚本..."
@@ -135,22 +141,37 @@ nohup python main.py > sing-box.log 2>&1 &
 EOF
         chmod +x start.sh
         
+        # 配置防火墙
+        echo "配置防火墙规则..."
+        if command -v ufw &> /dev/null; then
+            ufw allow 5000/tcp
+            ufw status
+        elif command -v firewall-cmd &> /dev/null; then
+            firewall-cmd --zone=public --add-port=5000/tcp --permanent
+            firewall-cmd --reload
+        else
+            echo "未检测到防火墙，请手动确保5000端口已开放"
+        fi
+        
         # 启动服务
         echo -e "${GREEN}启动服务...${NC}"
         ./start.sh
         
         # 等待服务启动
-        sleep 3
-        if pgrep -f "python main.py" > /dev/null; then
-            echo -e "${GREEN}Python服务已成功启动${NC}"
-            # 显示最近的日志
-            echo -e "\n最近的日志输出:"
-            tail -n 10 sing-box.log
-        else
-            echo -e "${RED}Python服务启动失败，请检查sing-box.log文件${NC}"
-            tail -n 10 sing-box.log
-            exit 1
-        fi
+        echo "等待服务启动..."
+        for i in {1..30}; do
+            if curl -s http://localhost:5000 &> /dev/null; then
+                echo -e "${GREEN}服务已成功启动并可访问${NC}"
+                break
+            fi
+            if [ $i -eq 30 ]; then
+                echo -e "${RED}服务启动超时，请检查日志${NC}"
+                tail -n 20 sing-box.log
+                exit 1
+            fi
+            sleep 1
+            echo -n "."
+        done
         ;;
         
     2|"docker")
@@ -165,21 +186,37 @@ EOF
         echo "构建Docker镜像..."
         docker build --tag 'sing-box' .
         
+        # 配置防火墙
+        echo "配置防火墙规则..."
+        if command -v ufw &> /dev/null; then
+            ufw allow 5000/tcp
+            ufw status
+        elif command -v firewall-cmd &> /dev/null; then
+            firewall-cmd --zone=public --add-port=5000/tcp --permanent
+            firewall-cmd --reload
+        else
+            echo "未检测到防火墙，请手动确保5000端口已开放"
+        fi
+        
         # 运行容器
         echo -e "${GREEN}启动Docker容器...${NC}"
         docker run -d --name sing-box -p 5000:5000 sing-box:latest
         
         # 检查容器是否正常运行
-        if [ "$(docker ps -q -f name=sing-box)" ]; then
-            echo -e "${GREEN}Docker容器已成功启动${NC}"
-            # 显示容器日志
-            echo -e "\n容器日志输出:"
-            docker logs sing-box
-        else
-            echo -e "${RED}Docker容器启动失败${NC}"
-            docker logs sing-box
-            exit 1
-        fi
+        echo "等待服务启动..."
+        for i in {1..30}; do
+            if curl -s http://localhost:5000 &> /dev/null; then
+                echo -e "${GREEN}服务已成功启动并可访问${NC}"
+                break
+            fi
+            if [ $i -eq 30 ]; then
+                echo -e "${RED}服务启动超时，请检查容器日志${NC}"
+                docker logs sing-box
+                exit 1
+            fi
+            sleep 1
+            echo -n "."
+        done
         ;;
         
     *)
